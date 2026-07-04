@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+enum MaterialType {
+  FILAMENTO
+  RESINA
+  LAMINA_LASER
+  OTRO
+}
+
+model Material {
+  id           String       @id @default(cuid())
+  name         String
+  type         MaterialType
+  unit         String // kg, g, m2, unidad, hoja
+  stock        Float        @default(0)
+  minStock     Float        @default(0)
+  costPerUnit  Float        @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  orderItems   OrderItem[]
+}
+
+enum OrderType {
+  IMPRESION_3D
+  CORTE_LASER
+  GRABADO
+  MIXTO
+}
+
+enum OrderStatus {
+  PENDIENTE
+  EN_PRODUCCION
+  LISTO
+  ENTREGADO
+  CANCELADO
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  code         String      @unique
+  client       Client      @relation(fields: [clientId], references: [id])
+  clientId     String
+  type         OrderType
+  status       OrderStatus @default(PENDIENTE)
+  description  String?
+  deliveryDate DateTime?
+  laborCost    Float       @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  items        OrderItem[]
+  invoices     Invoice[]
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId    String
+  material   Material @relation(fields: [materialId], references: [id])
+  materialId String
+  quantity   Float
+  unitCost   Float
+  createdAt  DateTime @default(now())
+}
+
+enum InvoiceStatus {
+  PENDIENTE
+  PAGADA
+  VENCIDA
+  CANCELADA
+}
+
+model Invoice {
+  id        String        @id @default(cuid())
+  number    String        @unique
+  order     Order         @relation(fields: [orderId], references: [id])
+  orderId   String
+  amount    Float
+  status    InvoiceStatus @default(PENDIENTE)
+  issueDate DateTime      @default(now())
+  dueDate   DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  payments  Payment[]
+}
+
+enum PaymentMethod {
+  EFECTIVO
+  TRANSFERENCIA
+  TARJETA
+  OTRO
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id])
+  invoiceId String
+  amount    Float
+  method    PaymentMethod @default(EFECTIVO)
+  paidAt    DateTime      @default(now())
+  createdAt DateTime      @default(now())
+}
